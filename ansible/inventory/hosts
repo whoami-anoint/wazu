@@ -1,0 +1,4 @@
+[wazuh-server]
+44.206.246.115   ansible_user=ubuntu
+[wazuh-client]
+44.206.246.116 ansible_user=ubuntu
