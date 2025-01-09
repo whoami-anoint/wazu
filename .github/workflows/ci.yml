@@ -53,14 +53,28 @@ jobs:
       # Step 7: Wait for Tunnelmole to initialize and fetch public URLs
       - name: Get Tunnelmole Public URLs
         run: |
-          # Wait for Tunnelmole to establish the tunnels
-          sleep 10
+          # Retry mechanism to wait for Tunnelmole to establish tunnels
+          attempts=0
+          max_attempts=10
+          until curl --silent http://127.0.0.1:4040/api/tunnels | jq -e '.tunnels | length > 0'; do
+            if [ $attempts -ge $max_attempts ]; then
+              echo "Failed to get tunnels after $max_attempts attempts"
+              exit 1
+            fi
+            echo "Waiting for Tunnelmole to initialize tunnels..."
+            sleep 5
+            ((attempts++))
+          done
+          
+          # Fetch the Tunnelmole information again after successful connection
+          TUNNEL_INFO=$(curl --silent http://127.0.0.1:4040/api/tunnels)
+          echo "Tunnelmole Tunnel Info: $TUNNEL_INFO"
           
           # Get the public URL for port 1514 (agent communication)
-          AGENT_URL=$(curl --silent http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[] | select(.config.addr == "tcp://0.0.0.0:1514") | .public_url')
+          AGENT_URL=$(echo "$TUNNEL_INFO" | jq -r '.tunnels[] | select(.config.addr == "tcp://0.0.0.0:1514") | .public_url')
           
           # Get the public URL for port 55000 (Wazuh API)
-          API_URL=$(curl --silent http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[] | select(.config.addr == "tcp://0.0.0.0:55000") | .public_url')
+          API_URL=$(echo "$TUNNEL_INFO" | jq -r '.tunnels[] | select(.config.addr == "tcp://0.0.0.0:55000") | .public_url')
           
           # Output the public URLs
           echo "Tunnelmole Agent URL: $AGENT_URL"
