@@ -1,4 +1,4 @@
-name: Wazuh Manager Setup with Ngrok
+name: Wazuh Manager Setup with Tunnelmole
 
 on:
   push:
@@ -39,42 +39,35 @@ jobs:
         run: |
           docker ps
 
-      # Step 5: Install Ngrok
-      - name: Install Ngrok
+      # Step 5: Install Tunnelmole
+      - name: Install Tunnelmole
         run: |
-          curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc \
-            | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null && echo "deb https://ngrok-agent.s3.amazonaws.com buster main" \
-            | sudo tee /etc/apt/sources.list.d/ngrok.list && sudo apt update && sudo apt install ngrok
+          curl -O https://install.tunnelmole.com/t357g/install && sudo bash install
 
-      # Step 6: Configure Ngrok Authtoken
-      - name: Configure Ngrok Authtoken
+      # Step 6: Expose Wazuh Manager via Tunnelmole (Ports 1514 and 55000)
+      - name: Expose Wazuh Manager via Tunnelmole
         run: |
-          ngrok config add-authtoken 232LoK9HE67GqM6veskRqb3GuR0_6so5RVAzM1KyYtk6zp3MC
+          nohup sudo tunnelmole tcp 1514 &
+          nohup sudo tunnelmole tcp 55000 &
 
-      # Step 7: Expose Wazuh Manager via Ngrok (Ports 1514 and 55000)
-      - name: Expose Wazuh Manager via Ngrok
+      # Step 7: Wait for Tunnelmole to initialize and fetch public URLs
+      - name: Get Tunnelmole Public URLs
         run: |
-          nohup ngrok tcp 1514 > ngrok.log &
-          nohup ngrok tcp 55000 > ngrok-api.log &
-
-      # Step 8: Fetch Ngrok public URLs using Ngrok's API
-      - name: Get Ngrok Public URLs
-        run: |
-          # Wait a few seconds for Ngrok to initialize
-          sleep 5
+          # Wait for Tunnelmole to establish the tunnels
+          sleep 10
           
           # Get the public URL for port 1514 (agent communication)
-          AGENT_URL=$(curl --silent http://localhost:4040/api/tunnels | jq -r '.tunnels[] | select(.config.addr == "tcp://0.tcp.ngrok.io:1514") | .public_url')
+          AGENT_URL=$(curl --silent http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[] | select(.config.addr == "tcp://0.0.0.0:1514") | .public_url')
           
           # Get the public URL for port 55000 (Wazuh API)
-          API_URL=$(curl --silent http://localhost:4040/api/tunnels | jq -r '.tunnels[] | select(.config.addr == "tcp://0.tcp.ngrok.io:55000") | .public_url')
+          API_URL=$(curl --silent http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[] | select(.config.addr == "tcp://0.0.0.0:55000") | .public_url')
           
           # Output the public URLs
-          echo "Ngrok Agent URL: $AGENT_URL"
-          echo "Ngrok API URL: $API_URL"
+          echo "Tunnelmole Agent URL: $AGENT_URL"
+          echo "Tunnelmole API URL: $API_URL"
 
-      # Step 9: Show the URLs
-      - name: Show Ngrok URLs
+      # Step 8: Show the URLs
+      - name: Show Tunnelmole URLs
         run: |
           echo "Public URLs for Wazuh Manager:"
           echo "Agent communication URL: $AGENT_URL"
