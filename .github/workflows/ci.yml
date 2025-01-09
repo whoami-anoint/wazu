@@ -57,7 +57,25 @@ jobs:
           nohup ngrok tcp 1514 > ngrok.log &
           nohup ngrok tcp 55000 > ngrok-api.log &
 
-      # Step 8: Show Ngrok status and get external URLs
-      - name: Show Ngrok status
+      # Step 8: Fetch Ngrok public URLs using Ngrok's API
+      - name: Get Ngrok Public URLs
         run: |
-          tail -f ngrok.log
+          # Wait a few seconds for Ngrok to initialize
+          sleep 5
+          
+          # Get the public URL for port 1514 (agent communication)
+          AGENT_URL=$(curl --silent http://localhost:4040/api/tunnels | jq -r '.tunnels[] | select(.config.addr == "tcp://0.tcp.ngrok.io:1514") | .public_url')
+          
+          # Get the public URL for port 55000 (Wazuh API)
+          API_URL=$(curl --silent http://localhost:4040/api/tunnels | jq -r '.tunnels[] | select(.config.addr == "tcp://0.tcp.ngrok.io:55000") | .public_url')
+          
+          # Output the public URLs
+          echo "Ngrok Agent URL: $AGENT_URL"
+          echo "Ngrok API URL: $API_URL"
+
+      # Step 9: Show the URLs
+      - name: Show Ngrok URLs
+        run: |
+          echo "Public URLs for Wazuh Manager:"
+          echo "Agent communication URL: $AGENT_URL"
+          echo "API URL: $API_URL"
