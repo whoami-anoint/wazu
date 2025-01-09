@@ -24,15 +24,15 @@ jobs:
           sudo systemctl enable docker
           sudo systemctl start docker
 
-      # Step 2: Pull Wazuh Manager version 4.2.5 Docker image
-      - name: Pull Wazuh Manager v4.2.5 Docker image
+      # Step 2: Pull Wazuh Manager Docker image version 3.13.6_7.9.2
+      - name: Pull Wazuh Manager v3.13.6_7.9.2 Docker image
         run: |
-          docker pull wazuh/wazuh:v4.2.5
+          docker pull wazuh/wazuh:3.13.6_7.9.2
 
       # Step 3: Run Wazuh Manager in a Docker container
       - name: Run Wazuh Manager container
         run: |
-          docker run -d --name wazuh-manager -p 1514:1514 -p 55000:55000 wazuh/wazuh:v4.2.5
+          docker run -d --name wazuh-manager -p 1514:1514 -p 55000:55000 wazuh/wazuh:3.13.6_7.9.2
 
       # Step 4: Verify that the Wazuh Manager container is running
       - name: Test Wazuh Manager container
